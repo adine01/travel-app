@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const { email, password } = await req.json()
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
@@ -15,12 +15,14 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json({ message: "User created successfully" })
-  } catch (error: any) {
+  } catch (error) {
     console.error("Signup error:", error)
 
-    // Check if it's a Prisma error
-    if (error.code === "P2002") {
-      return NextResponse.json({ error: "Email already exists" }, { status: 400 })
+    if (error instanceof Error) {
+      // Check if it's a Prisma error
+      if ("code" in error && error.code === "P2002") {
+        return NextResponse.json({ error: "Email already exists" }, { status: 400 })
+      }
     }
 
     return NextResponse.json({ error: "Error creating user" }, { status: 500 })

@@ -1,13 +1,11 @@
-import type { NextAuthOptions } from "next-auth"
+import type { AuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -24,11 +22,14 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         })
 
-        if (!user) {
+        if (!user || !user.password) {
           return null
         }
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        )
 
         if (!isPasswordValid) {
           return null
@@ -37,16 +38,15 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
         }
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
   pages: {
     signIn: "/login",
+  },
+  session: {
+    strategy: "jwt",
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -56,11 +56,10 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session?.user) {
         session.user.id = token.id as string
       }
       return session
     },
   },
 }
-
